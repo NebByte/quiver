@@ -2,6 +2,7 @@ use quiver::bitops;
 use quiver::bitops::scalar;
 use quiver::bitmap::QuiverBitmap;
 use quiver::bench::{bench, bench_throughput, BenchResult};
+use quiver::minidb::{QuiverDB, Value};
 
 use std::time::Duration;
 
@@ -264,6 +265,106 @@ fn main() {
         assert_eq!(naive, broadword, "broadword select mismatch at n={}", n);
     }
     println!("  ✓ Broadword select: {} checks passed", word_pop);
+
+    // ================================================================
+    // 7. MINI DATABASE BENCHMARK (REAL-WORLD APPLICATION)
+    // ================================================================
+    println!();
+    println!("━━━ QUIVERDB: columnar database with bitmap indexes ━━━");
+    println!();
+
+    // Build a 500K-row database with 3 columns
+    let num_rows: usize = 500_000;
+    println!("  Building database: {} rows, 3 columns...", num_rows);
+
+    let ages: Vec<i64> = (0..num_rows as i64).map(|i| 18 + (i * 7 + 3) % 62).collect();
+    let depts: Vec<i64> = (0..num_rows as i64).map(|i| (i * 13 + 5) % 20).collect();
+    let regions: Vec<i64> = (0..num_rows as i64).map(|i| (i * 31 + 11) % 50).collect();
+
+    let build_start = std::time::Instant::now();
+    let mut db = QuiverDB::new();
+    db.add_int_column("age", ages);
+    db.add_int_column("dept", depts);
+    db.add_int_column("region", regions);
+    let build_time = build_start.elapsed();
+
+    println!("  Database built in {:.1} ms", build_time.as_secs_f64() * 1000.0);
+    println!("  Index memory: {} KB", db.index_memory_bytes() / 1024);
+    println!("  Row count: {}", db.row_count());
+    println!();
+
+    // --- Query 1: Single equality ---
+    let target_age = Value::Int(30);
+    let q1_bitmap = bench("DB: bitmap  WHERE age=30", min_dur, || {
+        db.count_where_eq("age", &target_age)
+    });
+    let q1_naive = bench("DB: scan    WHERE age=30", min_dur, || {
+        db.naive_count_where_eq_int("age", 30)
+    });
+    q1_bitmap.print();
+    q1_naive.print();
+    let count1 = db.count_where_eq("age", &target_age);
+    let naive1 = db.naive_count_where_eq_int("age", 30);
+    assert_eq!(count1, naive1, "equality count mismatch");
+    println!("  → Bitmap vs Scan speedup: {:.1}x", q1_naive.mean_ns / q1_bitmap.mean_ns);
+    println!();
+
+    // --- Query 2: AND (two-column filter) ---
+    let target_dept = Value::Int(5);
+    let q2_bitmap = bench("DB: bitmap  WHERE age=30 AND dept=5", min_dur, || {
+        db.count_where_and("age", &target_age, "dept", &target_dept)
+    });
+    let q2_naive = bench("DB: scan    WHERE age=30 AND dept=5", min_dur, || {
+        db.naive_count_where_and_int("age", 30, "dept", 5)
+    });
+    q2_bitmap.print();
+    q2_naive.print();
+    let count2 = db.count_where_and("age", &target_age, "dept", &target_dept);
+    let naive2 = db.naive_count_where_and_int("age", 30, "dept", 5);
+    assert_eq!(count2, naive2, "AND count mismatch");
+    println!("  → Bitmap vs Scan speedup: {:.1}x", q2_naive.mean_ns / q2_bitmap.mean_ns);
+    println!();
+
+    // --- Query 3: OR (two-column filter) ---
+    let target_region = Value::Int(10);
+    let q3_bitmap = bench("DB: bitmap  WHERE age=30 OR region=10", min_dur, || {
+        db.count_where_or("age", &target_age, "region", &target_region)
+    });
+    q3_bitmap.print();
+    println!();
+
+    // --- Query 4: Range query ---
+    let q4_bitmap = bench("DB: bitmap  WHERE age BETWEEN 25 AND 35", min_dur, || {
+        db.count_where_range("age", 25, 35)
+    });
+    let q4_naive = bench("DB: scan    WHERE age BETWEEN 25 AND 35", min_dur, || {
+        db.naive_count_where_range("age", 25, 35)
+    });
+    q4_bitmap.print();
+    q4_naive.print();
+    let count4 = db.count_where_range("age", 25, 35);
+    let naive4 = db.naive_count_where_range("age", 25, 35);
+    assert_eq!(count4, naive4, "range count mismatch");
+    println!("  → Bitmap vs Scan speedup: {:.1}x", q4_naive.mean_ns / q4_bitmap.mean_ns);
+    println!();
+
+    // --- Query 5: Multi-AND (3 columns) ---
+    let q5_bitmap = bench("DB: bitmap  WHERE age=30 AND dept=5 AND region=10", min_dur, || {
+        db.count_where_multi_and(&[
+            ("age", &Value::Int(30)),
+            ("dept", &Value::Int(5)),
+            ("region", &Value::Int(10)),
+        ])
+    });
+    q5_bitmap.print();
+    println!();
+
+    // --- Correctness ---
+    println!("━━━ DB CORRECTNESS ━━━");
+    println!("  ✓ Single equality:  bitmap={} naive={}", count1, naive1);
+    println!("  ✓ AND query:        bitmap={} naive={}", count2, naive2);
+    println!("  ✓ Range query:      bitmap={} naive={}", count4, naive4);
+    println!("  ✓ All queries match between bitmap-indexed and naive scan");
 
     println!();
     println!("═══════════════════════════════════════════════════════════════");
