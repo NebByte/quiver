@@ -1,0 +1,82 @@
+name: Quiver ARM Benchmark
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
+
+jobs:
+  arm-benchmark:
+    name: Run Quiver on Real ARM (aarch64)
+    runs-on: ubuntu-24.04-arm  # FREE ARM64 runner — Arm Neoverse N2, 4 vCPUs, NEON + SVE2
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Show ARM CPU info
+        run: |
+          echo "╔══════════════════════════════════════════════════════════════╗"
+          echo "║              SYSTEM INFORMATION                            ║"
+          echo "╚══════════════════════════════════════════════════════════════╝"
+          echo ""
+          echo "Architecture: $(uname -m)"
+          echo "Kernel: $(uname -r)"
+          echo ""
+          echo "=== CPU Details ==="
+          lscpu | head -25
+          echo ""
+          echo "=== Cache Info ==="
+          lscpu | grep -i cache
+          echo ""
+          echo "=== CPU Features (NEON/SVE check) ==="
+          cat /proc/cpuinfo | grep Features | head -1
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Quiver (release, native ARM)
+        run: cargo build --release
+        env:
+          RUSTFLAGS: "-C target-cpu=native"
+
+      - name: Run Quiver Benchmark Suite
+        run: |
+          echo ""
+          echo "╔══════════════════════════════════════════════════════════════╗"
+          echo "║          QUIVER ARM BENCHMARK — REAL HARDWARE              ║"
+          echo "╚══════════════════════════════════════════════════════════════╝"
+          echo ""
+          cargo run --release 2>&1 | tee quiver_arm_results.txt
+        env:
+          RUSTFLAGS: "-C target-cpu=native"
+
+      - name: Build and Run C NEON Benchmark (v2)
+        run: |
+          echo ""
+          echo "╔══════════════════════════════════════════════════════════════╗"
+          echo "║          C NEON BENCHMARK v2 — REAL HARDWARE               ║"
+          echo "╚══════════════════════════════════════════════════════════════╝"
+          echo ""
+          gcc -O3 -march=native -o quiver_neon_v2 quiver_neon_v2.c
+          ./quiver_neon_v2 2>&1 | tee quiver_c_neon_results.txt
+
+      - name: Build and Run C NEON Benchmark (v1)
+        run: |
+          echo ""
+          echo "╔══════════════════════════════════════════════════════════════╗"
+          echo "║          C NEON BENCHMARK v1 — REAL HARDWARE               ║"
+          echo "╚══════════════════════════════════════════════════════════════╝"
+          echo ""
+          gcc -O3 -march=native -o quiver_neon quiver_neon.c
+          ./quiver_neon 2>&1 | tee quiver_c_neon_v1_results.txt
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: quiver-arm-benchmark-results
+          path: |
+            quiver_arm_results.txt
+            quiver_c_neon_results.txt
+            quiver_c_neon_v1_results.txt
+          retention-days: 90
