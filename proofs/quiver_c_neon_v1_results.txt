@@ -9,23 +9,23 @@
 ━━━ POPCOUNT: count set bits in a block ━━━
 
   64 words (0 KB):
-    scalar:        10.5 ns/op  [48.68 GB/s]
+    scalar:        10.9 ns/op  [47.00 GB/s]
     NEON:          18.3 ns/op  [28.01 GB/s]
-    speedup: 0.58x  ✓
+    speedup: 0.60x  ✓
 
   256 words (2 KB):
     scalar:        38.8 ns/op  [52.82 GB/s]
-    NEON:          66.7 ns/op  [30.71 GB/s]
+    NEON:          66.5 ns/op  [30.78 GB/s]
     speedup: 0.58x  ✓
 
   1024 words (8 KB):
-    scalar:       151.8 ns/op  [53.98 GB/s]
-    NEON:         264.3 ns/op  [31.00 GB/s]
-    speedup: 0.57x  ✓
+    scalar:       152.1 ns/op  [53.87 GB/s]
+    NEON:         264.2 ns/op  [31.01 GB/s]
+    speedup: 0.58x  ✓
 
   4096 words (32 KB):
-    scalar:       608.6 ns/op  [53.84 GB/s]
-    NEON:        1046.0 ns/op  [31.33 GB/s]
+    scalar:       609.4 ns/op  [53.77 GB/s]
+    NEON:        1046.4 ns/op  [31.32 GB/s]
     speedup: 0.58x  ✓
 
 ━━━ RANK: count set bits before position ━━━
@@ -36,45 +36,45 @@
     speedup: 0.58x  ✓
 
   1024 words, pos=32768:
-    scalar:        76.3 ns/op
+    scalar:        76.4 ns/op
     NEON:         130.8 ns/op
     speedup: 0.58x  ✓
 
   4096 words, pos=131072:
-    scalar:       305.6 ns/op
-    NEON:         526.1 ns/op
+    scalar:       305.9 ns/op
+    NEON:         526.8 ns/op
     speedup: 0.58x  ✓
 
 ━━━ SELECT: find n-th set bit position ━━━
 
   256 words, n=4113:
-    scalar:       121.3 ns/op
-    NEON:          99.9 ns/op
-    speedup: 1.21x  ✓
+    scalar:       122.7 ns/op
+    NEON:          99.4 ns/op
+    speedup: 1.23x  ✓
 
   1024 words, n=16410:
-    scalar:       401.9 ns/op
-    NEON:         293.2 ns/op
+    scalar:       400.9 ns/op
+    NEON:         291.8 ns/op
     speedup: 1.37x  ✓
 
   4096 words, n=65589:
-    scalar:      1519.1 ns/op
-    NEON:        1134.8 ns/op
+    scalar:      1520.4 ns/op
+    NEON:        1135.5 ns/op
     speedup: 1.34x  ✓
 
 ━━━ BULK BITWISE: AND / OR on bitmap containers ━━━
 
   256 words (2 KB):
-    AND  scalar:       46.9 ns   NEON:       53.3 ns   speedup: 0.88x
-    OR   scalar:       47.6 ns   NEON:       53.2 ns   speedup: 0.89x
+    AND  scalar:       46.4 ns   NEON:       53.5 ns   speedup: 0.87x
+    OR   scalar:       47.2 ns   NEON:       53.3 ns   speedup: 0.89x
 
   1024 words (8 KB):
-    AND  scalar:      187.4 ns   NEON:      216.0 ns   speedup: 0.87x
-    OR   scalar:      188.1 ns   NEON:      215.6 ns   speedup: 0.87x
+    AND  scalar:      187.3 ns   NEON:      215.9 ns   speedup: 0.87x
+    OR   scalar:      188.4 ns   NEON:      216.1 ns   speedup: 0.87x
 
   4096 words (32 KB):
-    AND  scalar:      746.0 ns   NEON:      858.9 ns   speedup: 0.87x
-    OR   scalar:      761.8 ns   NEON:      860.1 ns   speedup: 0.89x
+    AND  scalar:      748.3 ns   NEON:      862.0 ns   speedup: 0.87x
+    OR   scalar:      760.1 ns   NEON:      859.2 ns   speedup: 0.88x
 
 ═══════════════════════════════════════════════════════════════════
   All correctness checks passed.

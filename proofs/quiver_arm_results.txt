@@ -1,0 +1,183 @@
+[1m[33mwarning[0m[1m: unused import: `std::os::raw::c_uint`[0m
+ [1m[94m--> [0msrc/ffi.rs:2:5
+  [1m[94m|[0m
+[1m[94m2[0m [1m[94m|[0m use std::os::raw::c_uint;
+  [1m[94m|[0m     [1m[33m^^^^^^^^^^^^^^^^^^^^[0m
+  [1m[94m|[0m
+  [1m[94m= [0m[1mnote[0m: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+[1m[33mwarning[0m[1m: variable does not need to be mutable[0m
+  [1m[94m--> [0msrc/bitops/neon.rs:99:29
+   [1m[94m|[0m
+[1m[94m99[0m [1m[94m|[0m pub fn select(data: &[u64], mut n: u64) -> Option<usize> {
+   [1m[94m|[0m                             [1m[94m----[0m[1m[33m^[0m
+   [1m[94m|[0m                             [1m[94m|[0m
+   [1m[94m|[0m                             [1m[94mhelp: remove this `mut`[0m
+   [1m[94m|[0m
+   [1m[94m= [0m[1mnote[0m: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+[1m[33mwarning[0m[1m: variable does not need to be mutable[0m
+  [1m[94m--> [0msrc/bench/mod.rs:72:5
+   [1m[94m|[0m
+[1m[94m72[0m [1m[94m|[0m     mut f: F,
+   [1m[94m|[0m     [1m[94m----[0m[1m[33m^[0m
+   [1m[94m|[0m     [1m[94m|[0m
+   [1m[94m|[0m     [1m[94mhelp: remove this `mut`[0m
+
+[1m[33mwarning[0m[1m: function `find_key_linear` is never used[0m
+   [1m[94m--> [0msrc/btree/mod.rs:368:4
+    [1m[94m|[0m
+[1m[94m368[0m [1m[94m|[0m fn find_key_linear(keys: &[i64], target: i64) -> Result<usize, usize> {
+    [1m[94m|[0m    [1m[33m^^^^^^^^^^^^^^^[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mnote[0m: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+[1m[33mwarning[0m: `quiver` (lib) generated 4 warnings (run `cargo fix --lib -p quiver` to apply 3 suggestions)
+[1m[33mwarning[0m[1m: unused import: `BenchResult`[0m
+ [1m[94m--> [0msrc/main.rs:4:46
+  [1m[94m|[0m
+[1m[94m4[0m [1m[94m|[0m use quiver::bench::{bench, bench_throughput, BenchResult};
+  [1m[94m|[0m                                              [1m[33m^^^^^^^^^^^[0m
+  [1m[94m|[0m
+  [1m[94m= [0m[1mnote[0m: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+[1m[33mwarning[0m: `quiver` (bin "quiver-bench") generated 1 warning (run `cargo fix --bin "quiver-bench" -p quiver` to apply 1 suggestion)
+[1m[92m    Finished[0m `release` profile [optimized] target(s) in 0.04s
+[1m[92m     Running[0m `target/release/quiver-bench`
+╔══════════════════════════════════════════════════════════════╗
+║                   QUIVER PoC Benchmark                     ║
+║         ARM-Optimized Data Structure Primitives            ║
+╠══════════════════════════════════════════════════════════════╣
+║  Backend: ARM NEON (native)                                    ║
+║  Platform: aarch64                                         ║
+╚══════════════════════════════════════════════════════════════╝
+
+━━━ POPCOUNT: count set bits in a block ━━━
+
+  scalar  popcount  64w (0KB)               45.6 ns/op  (10963224 iters, 500.00 ms total)  [11.23 GB/s]
+  dispatch popcount 64w (0KB)               50.0 ns/op  (9991173 iters, 500.00 ms total)  [10.23 GB/s]
+
+  scalar  popcount  256w (2KB)              74.4 ns/op  (6724241 iters, 500.00 ms total)  [27.54 GB/s]
+  dispatch popcount 256w (2KB)              91.8 ns/op  (5444719 iters, 500.00 ms total)  [22.30 GB/s]
+
+  scalar  popcount  1024w (8KB)            187.6 ns/op  (2665438 iters, 500.00 ms total)  [43.67 GB/s]
+  dispatch popcount 1024w (8KB)            263.0 ns/op  (1901218 iters, 500.00 ms total)  [31.15 GB/s]
+
+  scalar  popcount  4096w (32KB)           642.4 ns/op  (778296 iters, 500.00 ms total)  [51.01 GB/s]
+  dispatch popcount 4096w (32KB)           935.0 ns/op  (534744 iters, 500.00 ms total)  [35.04 GB/s]
+
+  scalar  popcount  16384w (128KB)        2474.5 ns/op  (202062 iters, 500.00 ms total)  [52.97 GB/s]
+  dispatch popcount 16384w (128KB)        3632.1 ns/op  (137661 iters, 500.00 ms total)  [36.09 GB/s]
+
+━━━ RANK: count set bits before position ━━━
+
+  scalar  rank  256w pos=8192               78.9 ns/op  (6338968 iters, 500.00 ms total)
+  dispatch rank 256w pos=8192               62.0 ns/op  (8061582 iters, 500.00 ms total)
+
+  scalar  rank  1024w pos=32768            198.6 ns/op  (2517638 iters, 500.00 ms total)
+  dispatch rank 1024w pos=32768            147.1 ns/op  (3399781 iters, 500.00 ms total)
+
+  scalar  rank  4096w pos=131072           661.6 ns/op  (755703 iters, 500.00 ms total)
+  dispatch rank 4096w pos=131072           490.2 ns/op  (1020090 iters, 500.00 ms total)
+
+━━━ SELECT: find n-th set bit position ━━━
+
+  scalar  select  256w n=4113              151.0 ns/op  (3312254 iters, 500.00 ms total)
+  dispatch select 256w n=4113              130.1 ns/op  (3842641 iters, 500.00 ms total)
+
+  scalar  select  1024w n=16410            447.5 ns/op  (1117265 iters, 500.00 ms total)
+  dispatch select 1024w n=16410            324.4 ns/op  (1541143 iters, 500.00 ms total)
+
+  scalar  select  4096w n=65589           1633.1 ns/op  (306169 iters, 500.00 ms total)
+  dispatch select 4096w n=65589           1152.8 ns/op  (433740 iters, 500.00 ms total)
+
+━━━ SELECT-IN-WORD: broadword vs naive ━━━
+
+  naive   select_in_word                   217.5 ns/op  (2299205 iters, 500.00 ms total)
+  broadword select_in_word                 176.5 ns/op  (2832666 iters, 500.00 ms total)
+
+━━━ QUIVER BITMAP: compressed bitmap operations ━━━
+
+  Sparse bitmap: 10000 values, 35672 bytes, 489 chunks
+  Dense  bitmap: 100000 values, 13752 bytes, 13 chunks
+
+  bitmap: sparse contains (hit)          14084.9 ns/op  (35500 iters, 500.01 ms total)
+  bitmap: sparse contains (miss)         12254.1 ns/op  (40803 iters, 500.01 ms total)
+  bitmap: dense cardinality                423.1 ns/op  (1181864 iters, 500.00 ms total)
+  bitmap: dense rank(50000)                224.1 ns/op  (2230703 iters, 500.00 ms total)
+  bitmap: dense select(50000)              268.8 ns/op  (1859998 iters, 500.00 ms total)
+  bitmap: dense AND (intersection)        1053.0 ns/op  (474850 iters, 500.00 ms total)
+  bitmap: dense OR (union)                1682.0 ns/op  (297257 iters, 500.00 ms total)
+
+━━━ CORRECTNESS CHECKS ━━━
+
+  ✓ Bitmap AND: 50000 (expected 50000)
+  ✓ Bitmap OR:  150000 (expected 150000)
+  ✓ Rank/Select round-trip: 10 checks passed
+  ✓ Bitops popcount/rank/select: all sizes verified
+  ✓ Broadword select: 46 checks passed
+
+━━━ QUIVERDB: columnar database with bitmap indexes ━━━
+
+  Building database: 500000 rows, 3 columns...
+  Database built in 69.5 ms
+  Index memory: 3188 KB
+  Row count: 500000
+
+  DB: bitmap  WHERE age=30                 108.6 ns/op  (4602386 iters, 500.00 ms total)
+  DB: scan    WHERE age=30              109587.1 ns/op  (4563 iters, 500.05 ms total)
+  → Bitmap vs Scan speedup: 1008.7x
+
+  DB: bitmap  WHERE age=30 AND dept=5    25174.0 ns/op  (19862 iters, 500.01 ms total)
+  DB: scan    WHERE age=30 AND dept=5   160436.7 ns/op  (3117 iters, 500.08 ms total)
+  → Bitmap vs Scan speedup: 6.4x
+
+  DB: bitmap  WHERE age=30 OR region=10    18525.6 ns/op  (26990 iters, 500.00 ms total)
+
+  DB: bitmap  WHERE age BETWEEN 25 AND 35   125764.2 ns/op  (3976 iters, 500.04 ms total)
+  DB: scan    WHERE age BETWEEN 25 AND 35   111438.9 ns/op  (4487 iters, 500.03 ms total)
+  → Bitmap vs Scan speedup: 0.9x
+
+  DB: bitmap  WHERE age=30 AND dept=5 AND region=10    27592.4 ns/op  (18121 iters, 500.00 ms total)
+
+━━━ DB CORRECTNESS ━━━
+  ✓ Single equality:  bitmap=8065 naive=8065
+  ✓ AND query:        bitmap=0 naive=0
+  ✓ Range query:      bitmap=88709 naive=88709
+  ✓ All queries match between bitmap-indexed and naive scan
+
+━━━ VS SQLite (Real Production Database) ━━━
+
+  Spinning up in-memory SQLite database...
+  Loading 500000 rows into SQLite...
+  SQLite DB built in 1004.4 ms
+  DB: SQLite  WHERE age=30 AND dept=5  5386113.9 ns/op  (93 iters, 500.91 ms total)
+  → QuiverDB is 214.0x FASTER than SQLite
+
+━━━ CACHE-ADAPTIVE B-TREE: range/sorted indexing ━━━
+
+  Detected geometry (sysfs): line=64B, L1D=64KB, L2=1024KB
+    detected core    → fanout  15 (~240B/node, 4 cache lines)
+    Cortex-A55 (LITTLE) → fanout   7 (~112B/node, 2 cache lines)
+    Cortex-A78 (big)    → fanout  15 (~240B/node, 4 cache lines)
+
+  Built B-Tree: 100000 entries in 21.0 ms (2376 KB)
+  btree: point get (hit)                130522.8 ns/op  (3831 iters, 500.03 ms total)
+  btree: point get (miss)                32492.6 ns/op  (15389 iters, 500.03 ms total)
+  btree: range scan [25K, 75K]          325760.0 ns/op  (1535 iters, 500.04 ms total)
+  btree: std::BTreeMap point get         94777.4 ns/op  (5276 iters, 500.05 ms total)
+
+━━━ FM-INDEX: full-text search (genomics / cybersecurity) ━━━
+
+  Built FM-Index: 65536 bytes of text → 361 KB index in 238.8 ms
+  Pattern "ACGTACGTAC" occurs 4 times (planted ≥4)
+  fm-index: count (10-mer)                2312.8 ns/op  (216188 iters, 500.00 ms total)
+  fm-index: count (5-mer ACGTA)           1258.9 ns/op  (397160 iters, 500.00 ms total)
+  fm-index: locate (10-mer)               2333.2 ns/op  (214295 iters, 500.00 ms total)
+  scan:     naive count (10-mer)         63313.4 ns/op  (7898 iters, 500.05 ms total)
+  → FM-Index is 27.4x faster than naive scan
+  ✓ FM-Index count matches naive scan (4)
+
+═══════════════════════════════════════════════════════════════
+  Running on ARM with NEON — these are real SIMD numbers!
+═══════════════════════════════════════════════════════════════

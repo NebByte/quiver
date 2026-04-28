@@ -15,34 +15,34 @@
     64 w   0KB         38 ns         10 ns         18 ns   2.09x  
    256 w   2KB        151 ns         39 ns         66 ns   2.29x  
   1024 w   8KB        608 ns        152 ns        264 ns   2.30x  
-  4096 w  32KB       2422 ns        609 ns       1045 ns   2.32x  
+  4096 w  32KB       2421 ns        610 ns       1045 ns   2.32x  
 
 ━━━ RANK ━━━
 
   size             true scalar          NEON   speedup
   ────    ───────────  ────   ───────
-   256 w p= 8192         75 ns         34 ns   2.20x  
-  1024 w p=32768        305 ns        131 ns   2.33x  
-  4096 w p=131072       1213 ns        525 ns   2.31x  
+   256 w p= 8192         76 ns         34 ns   2.20x  
+  1024 w p=32768        305 ns        130 ns   2.34x  
+  4096 w p=131072       1212 ns        525 ns   2.31x  
 
 ━━━ SELECT ━━━
 
   size             true scalar          NEON   speedup
   ────    ───────────  ────   ───────
-   256 w n= 4113        124 ns        100 ns   1.23x  
-  1024 w n=16410        404 ns        294 ns   1.38x  
-  4096 w n=65589       1525 ns       1146 ns   1.33x  
+   256 w n= 4113        122 ns        101 ns   1.20x  
+  1024 w n=16410        404 ns        295 ns   1.37x  
+  4096 w n=65589       1525 ns       1144 ns   1.33x  
 
 ━━━ BULK BITWISE (AND / OR) ━━━
 
   size          op           true scalar          NEON   speedup
   ────  ──      ───────────  ────   ───────
-   256 w   2KB  AND               102 ns         61 ns   1.68x
+   256 w   2KB  AND               102 ns         61 ns   1.67x
    256 w   2KB  OR                114 ns         61 ns   1.87x
-  1024 w   8KB  AND               409 ns        246 ns   1.67x
-  1024 w   8KB  OR                458 ns        246 ns   1.87x
+  1024 w   8KB  AND               409 ns        245 ns   1.67x
+  1024 w   8KB  OR                457 ns        248 ns   1.84x
   4096 w  32KB  AND              1639 ns        979 ns   1.67x
-  4096 w  32KB  OR               1820 ns        982 ns   1.85x
+  4096 w  32KB  OR               1820 ns        980 ns   1.86x
 
 ═══════════════════════════════════════════════════════════════════
   INTERPRETATION GUIDE:

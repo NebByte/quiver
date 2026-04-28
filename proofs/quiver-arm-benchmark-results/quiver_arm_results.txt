@@ -1,2 +1,0 @@
-[1m[91merror[0m: `cargo run` could not determine which binary to run. Use the `--bin` option to specify a binary, or the `default-run` manifest key.
-available binaries: benchmark-json, quiver-bench, quiver-server
