@@ -7,6 +7,7 @@ description = "ARM-optimized memory-efficient data structure primitives — PoC"
 [lib]
 name = "quiver"
 path = "src/lib.rs"
+crate-type = ["rlib", "cdylib"]
 
 [[bin]]
 name = "quiver-bench"
