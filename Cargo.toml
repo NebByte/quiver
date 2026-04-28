@@ -19,4 +19,10 @@ lto = true
 codegen-units = 1
 
 [dependencies]
+axum = { version = "0.8.9", features = ["multipart"] }
+csv = "1.4.0"
 rusqlite = { version = "0.39.0", features = ["bundled"] }
+serde = "1.0.228"
+serde_json = "1.0.149"
+tokio = { version = "1.52.1", features = ["full"] }
+tower-http = { version = "0.6.8", features = ["cors", "fs"] }
