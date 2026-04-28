@@ -58,7 +58,7 @@ jobs:
           echo "║          C NEON BENCHMARK v2 — REAL HARDWARE               ║"
           echo "╚══════════════════════════════════════════════════════════════╝"
           echo ""
-          gcc -O3 -march=native -o quiver_neon_v2 quiver_neon_v2.c
+          gcc -O3 -march=native -o quiver_neon_v2 c_benchmarks/quiver_neon_v2.c
           ./quiver_neon_v2 2>&1 | tee quiver_c_neon_results.txt
 
       - name: Build and Run C NEON Benchmark (v1)
@@ -68,7 +68,7 @@ jobs:
           echo "║          C NEON BENCHMARK v1 — REAL HARDWARE               ║"
           echo "╚══════════════════════════════════════════════════════════════╝"
           echo ""
-          gcc -O3 -march=native -o quiver_neon quiver_neon.c
+          gcc -O3 -march=native -o quiver_neon c_benchmarks/quiver_neon.c
           ./quiver_neon 2>&1 | tee quiver_c_neon_v1_results.txt
 
       - name: Upload benchmark results
