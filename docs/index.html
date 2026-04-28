@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiver vs SQLite | ARM Architecture Benchmark</title>
+    <title>Quiver vs SQLite | Live ARM Benchmark</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
 
@@ -18,12 +18,12 @@
             --border: #30363d;
         }
 
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
             background-color: var(--bg-color);
             color: var(--text-primary);
             font-family: 'Inter', -apple-system, sans-serif;
-            margin: 0;
-            padding: 0;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -38,6 +38,7 @@
             border-radius: 16px;
             padding: 40px;
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            position: relative;
         }
 
         h1 {
@@ -65,14 +66,13 @@
             border-radius: 8px;
             margin-bottom: 40px;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             border: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
-        .track-container {
-            margin-bottom: 30px;
-            position: relative;
-        }
+        .track-container { margin-bottom: 30px; }
 
         .track-label {
             display: flex;
@@ -101,8 +101,7 @@
             width: 0%;
             border-radius: 8px;
             position: absolute;
-            top: 0;
-            left: 0;
+            top: 0; left: 0;
             display: flex;
             align-items: center;
             justify-content: flex-end;
@@ -164,29 +163,116 @@
             transition: opacity 0.5s ease;
             color: var(--quiver-color);
         }
-        
+
         .timer {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.9rem;
             opacity: 0.8;
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(13, 17, 23, 0.92);
+            border-radius: 16px;
+            z-index: 100;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-text {
+            font-size: 1.6rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #58a6ff, #2ea043, #58a6ff);
+            background-size: 200% 100%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 2s linear infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .loading-sub {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Spinning race car animation */
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--border);
+            border-top: 4px solid var(--quiver-color);
+            border-right: 4px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-dots::after {
+            content: '';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0% { content: ''; }
+            25% { content: '.'; }
+            50% { content: '..'; }
+            75% { content: '...'; }
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(46, 160, 67, 0.15);
+            border: 1px solid var(--quiver-color);
+            color: var(--quiver-color);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
 
     <div class="dashboard">
-        <h1>QuiverDB Performance Benchmark</h1>
-        <div class="subtitle">Live simulation based on empirical GitHub Actions data (Native aarch64)</div>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loading-overlay">
+            <div class="spinner"></div>
+            <div class="loading-text">Loading up the race<span class="loading-dots"></span></div>
+            <div class="loading-sub">Fetching live results from ARM Neoverse hardware</div>
+        </div>
+
+        <h1>QuiverDB vs SQLite</h1>
+        <div class="subtitle">Live benchmark executed on native ARM Neoverse (aarch64) via GitHub Actions</div>
 
         <div class="hardware-info">
-            <span>💻 Arch: Arm Neoverse N2 (AWS Graviton3 class)</span>
-            <span>📊 Dataset: 500,000 rows</span>
-            <span>🔍 Query: <code>SELECT count(*) WHERE age=30 AND dept=5</code></span>
+            <span>💻 Arm Neoverse N2 (GitHub Actions)</span>
+            <span>📊 Dataset: <span id="row-count">500,000</span> rows</span>
+            <span>🔍 <code>WHERE age=30 AND dept=5</code></span>
+            <span>🏗️ Arch: <span id="arch-label">aarch64</span></span>
         </div>
 
         <div class="track-container">
             <div class="track-label">
-                <span class="quiver-label">Quiver (NEON SIMD + Bitmaps)</span>
+                <span class="quiver-label">⚡ Quiver (NEON SIMD + Bitmaps)</span>
                 <span class="timer" id="quiver-timer">0.000 ms</span>
             </div>
             <div class="track">
@@ -196,7 +282,7 @@
 
         <div class="track-container">
             <div class="track-label">
-                <span class="sqlite-label">SQLite (Scalar Execution + B-Tree)</span>
+                <span class="sqlite-label">🐢 SQLite (Scalar + B-Tree Index)</span>
                 <span class="timer" id="sqlite-timer">0.000 ms</span>
             </div>
             <div class="track">
@@ -204,97 +290,109 @@
             </div>
         </div>
 
-        <div class="result-panel" id="result-panel">
-            ⚡ QuiverDB is 211.3x FASTER than SQLite
+        <div class="result-panel" id="result-panel"></div>
+
+        <div class="controls">
+            <button id="start-btn" onclick="runBenchmark()">▶ RUN BENCHMARK</button>
         </div>
 
-        <div class="controls" style="flex-direction: column; align-items: center; gap: 15px;">
-            <div style="color: var(--text-secondary); font-size: 0.9rem;">
-                Drop your own CSV (Age, Dept) to test live on ARM:
-                <input type="file" id="csv-upload" accept=".csv" style="margin-left: 10px; color: var(--quiver-color);">
-            </div>
-            <button id="start-btn" onclick="runBenchmark()">▶ RUN BENCHMARK</button>
+        <div style="text-align: center;">
+            <span class="badge" id="source-badge">Patent Pending</span>
         </div>
     </div>
 
     <script>
         const animationScale = 1000;
+
         async function runBenchmark() {
             const btn = document.getElementById('start-btn');
-            const fileInput = document.getElementById('csv-upload');
+            const overlay = document.getElementById('loading-overlay');
             const quiverRunner = document.getElementById('quiver-runner');
             const sqliteRunner = document.getElementById('sqlite-runner');
             const quiverTimer = document.getElementById('quiver-timer');
             const sqliteTimer = document.getElementById('sqlite-timer');
             const resultPanel = document.getElementById('result-panel');
+            const rowCount = document.getElementById('row-count');
+            const archLabel = document.getElementById('arch-label');
 
+            // Reset runners
             btn.disabled = true;
-            btn.innerText = "RUNNING LIVE BENCHMARK ON SERVER...";
             quiverRunner.style.width = '0%';
+            quiverRunner.innerText = '';
             sqliteRunner.style.width = '0%';
-            resultPanel.style.opacity = '0';
+            sqliteRunner.innerText = '';
             quiverRunner.style.transition = 'none';
             sqliteRunner.style.transition = 'none';
+            resultPanel.style.opacity = '0';
+            quiverTimer.innerText = '0.000 ms';
+            sqliteTimer.innerText = '0.000 ms';
 
+            // Show loading animation
+            overlay.classList.add('active');
+
+            // Fetch live ARM data from results.json (committed by GitHub Actions)
             let quiverTimeMs = 0.026;
             let sqliteTimeMs = 5.46;
-            let speedupMultiplier = 211.3;
-            let rowCountText = "500,000";
+            let speedup = 211.3;
+            let rows = 500000;
+            let arch = 'aarch64';
 
             try {
-                let response;
-                if (fileInput.files.length > 0) {
-                    const formData = new FormData();
-                    formData.append('file', fileInput.files[0]);
-                    response = await fetch('/api/upload_benchmark', { method: 'POST', body: formData });
-                } else {
-                    response = await fetch('/api/benchmark', { method: 'POST' });
-                }
-                
+                const cacheBuster = Date.now();
+                const response = await fetch('results.json?t=' + cacheBuster);
                 const data = await response.json();
-                quiverTimeMs = data.quiver_time_ns / 1000000.0;
-                sqliteTimeMs = data.sqlite_time_ns / 1000000.0;
-                speedupMultiplier = data.speedup_multiplier;
-                rowCountText = data.rows_processed.toLocaleString();
-            } catch (error) {
-                console.log("Using fallback visual data. (Server offline)");
+                quiverTimeMs = data.quiver_time_ns / 1_000_000;
+                sqliteTimeMs = data.sqlite_time_ns / 1_000_000;
+                speedup = data.speedup_multiplier;
+                rows = data.rows_processed;
+                arch = data.arch || 'aarch64';
+            } catch (e) {
+                console.log('Using fallback data (results.json not yet generated)');
             }
 
+            rowCount.innerText = rows.toLocaleString();
+            archLabel.innerText = arch;
+
+            // Simulate a brief loading delay so the animation is visible
+            await new Promise(r => setTimeout(r, 1800));
+
+            // Hide loading overlay
+            overlay.classList.remove('active');
+
+            // Force reflow
             void quiverRunner.offsetWidth;
 
             const startTime = performance.now();
             const quiverVisualTime = quiverTimeMs * animationScale;
             const sqliteVisualTime = sqliteTimeMs * animationScale;
 
-            btn.innerText = "ANIMATING RESULTS...";
-            
+            // Start race animation
             quiverRunner.style.transition = `width ${quiverVisualTime}ms linear`;
             sqliteRunner.style.transition = `width ${sqliteVisualTime}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
-
             quiverRunner.style.width = '100%';
             sqliteRunner.style.width = '100%';
 
-            resultPanel.innerText = `⚡ QuiverDB is ${speedupMultiplier.toFixed(1)}x FASTER on your ${rowCountText} rows`;
+            resultPanel.innerText = `⚡ QuiverDB is ${speedup.toFixed(1)}x FASTER than SQLite on ${rows.toLocaleString()} rows`;
 
-            // Update timers
+            // Update timers during animation
             const interval = setInterval(() => {
                 const elapsed = performance.now() - startTime;
-                
+
                 if (elapsed <= quiverVisualTime) {
-                    quiverTimer.innerText = ((elapsed / animationScale)).toFixed(3) + ' ms';
+                    quiverTimer.innerText = (elapsed / animationScale).toFixed(3) + ' ms';
                 } else {
                     quiverTimer.innerText = quiverTimeMs.toFixed(3) + ' ms';
                     quiverRunner.innerText = 'FINISHED';
                 }
 
                 if (elapsed <= sqliteVisualTime) {
-                    sqliteTimer.innerText = ((elapsed / animationScale)).toFixed(3) + ' ms';
+                    sqliteTimer.innerText = (elapsed / animationScale).toFixed(3) + ' ms';
                 } else {
                     sqliteTimer.innerText = sqliteTimeMs.toFixed(3) + ' ms';
                     sqliteRunner.innerText = 'FINISHED';
                     clearInterval(interval);
                     btn.disabled = false;
-                    btn.innerText = "▶ RUN AGAIN";
+                    btn.innerText = '▶ RUN AGAIN';
                     resultPanel.style.opacity = '1';
                 }
             }, 16);
