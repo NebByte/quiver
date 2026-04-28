@@ -9,7 +9,7 @@ use tower_http::cors::CorsLayer;
 use std::net::SocketAddr;
 use csv::ReaderBuilder;
 
-use quiver::minidb::QuiverDB;
+use quiver::minidb::{QuiverDB, Value};
 use rusqlite::{Connection, params};
 
 #[derive(Serialize)]
@@ -25,18 +25,17 @@ async fn main() {
     println!("🚀 Starting Quiver ARM Cloud Server...");
     
     let app = Router::new()
-        .nest_service("/", ServeDir::new("docs"))
         .route("/api/benchmark", post(run_investor_benchmark))
         .route("/api/upload_benchmark", post(run_custom_benchmark))
-        .layer(CorsLayer::permissive());
+        .layer(CorsLayer::permissive())
+        .fallback_service(ServeDir::new("docs"));
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
-    println!("🌐 Server listening on http://127.0.0.1:3000");
+    let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string()).parse::<u16>().unwrap();
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
+    println!("🌐 Server listening on http://0.0.0.0:{}", port);
     
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+    axum::serve(listener, app).await.unwrap();
 }
 
 /// Dynamic benchmark processing a user-uploaded CSV file
@@ -86,7 +85,7 @@ async fn run_custom_benchmark(mut multipart: Multipart) -> Json<BenchmarkRespons
 
     // 3. Run Benchmarks (Looking for exact match: age=30 AND dept=5)
     let quiver_start = std::time::Instant::now();
-    let _ = db.count_where_and("age", &30, "dept", &5);
+    let _ = db.count_where_and("age", &Value::Int(30), "dept", &Value::Int(5));
     let quiver_time_ns = quiver_start.elapsed().as_nanos() as u64;
 
     let sqlite_start = std::time::Instant::now();
@@ -130,7 +129,7 @@ async fn run_investor_benchmark() -> Json<BenchmarkResponse> {
     tx.commit().unwrap();
 
     let quiver_start = std::time::Instant::now();
-    let _ = db.count_where_and("age", &30, "dept", &5);
+    let _ = db.count_where_and("age", &Value::Int(30), "dept", &Value::Int(5));
     let quiver_time_ns = quiver_start.elapsed().as_nanos() as u64;
 
     let sqlite_start = std::time::Instant::now();
