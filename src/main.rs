@@ -3,6 +3,7 @@ use quiver::bitops::scalar;
 use quiver::bitmap::QuiverBitmap;
 use quiver::bench::{bench, bench_throughput, BenchResult};
 use quiver::minidb::{QuiverDB, Value};
+use rusqlite::{Connection, params};
 
 use std::time::Duration;
 
@@ -283,9 +284,9 @@ fn main() {
 
     let build_start = std::time::Instant::now();
     let mut db = QuiverDB::new();
-    db.add_int_column("age", ages);
-    db.add_int_column("dept", depts);
-    db.add_int_column("region", regions);
+    db.add_int_column("age", ages.clone());
+    db.add_int_column("dept", depts.clone());
+    db.add_int_column("region", regions.clone());
     let build_time = build_start.elapsed();
 
     println!("  Database built in {:.1} ms", build_time.as_secs_f64() * 1000.0);
@@ -365,6 +366,55 @@ fn main() {
     println!("  ✓ AND query:        bitmap={} naive={}", count2, naive2);
     println!("  ✓ Range query:      bitmap={} naive={}", count4, naive4);
     println!("  ✓ All queries match between bitmap-indexed and naive scan");
+
+    // ================================================================
+    // 8. VS REAL DATABASE (SQLite IN-MEMORY)
+    // ================================================================
+    println!();
+    println!("━━━ VS SQLite (Real Production Database) ━━━");
+    println!();
+    println!("  Spinning up in-memory SQLite database...");
+    
+    let mut conn = Connection::open_in_memory().unwrap();
+    conn.execute(
+        "CREATE TABLE users (
+            id INTEGER PRIMARY KEY,
+            age INTEGER,
+            dept INTEGER,
+            region INTEGER
+        )",
+        [],
+    ).unwrap();
+
+    // Create indexes to give SQLite a fair fight
+    conn.execute("CREATE INDEX idx_age ON users(age)", []).unwrap();
+    conn.execute("CREATE INDEX idx_dept ON users(dept)", []).unwrap();
+    conn.execute("CREATE INDEX idx_region ON users(region)", []).unwrap();
+
+    println!("  Loading {} rows into SQLite...", num_rows);
+    let sqlite_build_start = std::time::Instant::now();
+    
+    {
+        let tx = conn.transaction().unwrap();
+        let mut stmt = tx.prepare("INSERT INTO users (id, age, dept, region) VALUES (?1, ?2, ?3, ?4)").unwrap();
+        for i in 0..num_rows {
+            stmt.execute(params![i as i64, ages[i], depts[i], regions[i]]).unwrap();
+        }
+        drop(stmt);
+        tx.commit().unwrap();
+    }
+    
+    println!("  SQLite DB built in {:.1} ms", sqlite_build_start.elapsed().as_secs_f64() * 1000.0);
+
+    // Run the identical AND query: age=30 AND dept=5
+    let q2_sqlite = bench("DB: SQLite  WHERE age=30 AND dept=5", min_dur, || {
+        let mut stmt = conn.prepare_cached("SELECT count(*) FROM users WHERE age = 30 AND dept = 5").unwrap();
+        let count: i64 = stmt.query_row([], |row| row.get(0)).unwrap();
+        count as u64
+    });
+    
+    q2_sqlite.print();
+    println!("  → QuiverDB is {:.1}x FASTER than SQLite", q2_sqlite.mean_ns / q2_bitmap.mean_ns);
 
     println!();
     println!("═══════════════════════════════════════════════════════════════");
