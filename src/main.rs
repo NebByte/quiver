@@ -3,6 +3,8 @@ use quiver::bitops::scalar;
 use quiver::bitmap::QuiverBitmap;
 use quiver::bench::{bench, bench_throughput, BenchResult};
 use quiver::minidb::{QuiverDB, Value};
+use quiver::btree::{CacheBTree, CacheGeometry};
+use quiver::fmindex::FmIndex;
 use rusqlite::{Connection, params};
 
 use std::time::Duration;
@@ -415,6 +417,183 @@ fn main() {
     
     q2_sqlite.print();
     println!("  → QuiverDB is {:.1}x FASTER than SQLite", q2_sqlite.mean_ns / q2_bitmap.mean_ns);
+
+    // ================================================================
+    // 9. CACHE-ADAPTIVE B-TREE
+    // ================================================================
+    println!();
+    println!("━━━ CACHE-ADAPTIVE B-TREE: range/sorted indexing ━━━");
+    println!();
+
+    // Show how the tree auto-tunes to detected cache geometry.
+    let detected = CacheGeometry::detect();
+    println!(
+        "  Detected geometry ({}): line={}B, L1D={}KB, L2={}KB",
+        detected.source,
+        detected.line_size,
+        detected.l1d_size / 1024,
+        detected.l2_size / 1024,
+    );
+
+    let tree_default = CacheBTree::new();
+    let tree_a55 = CacheBTree::with_geometry(CacheGeometry::default_small_arm());
+    let tree_a78 = CacheBTree::with_geometry(CacheGeometry::default_modern_arm());
+    println!(
+        "    detected core    → fanout {:>3} (~{}B/node, {} cache lines)",
+        tree_default.fanout(),
+        tree_default.node_payload_bytes(),
+        tree_default.lines_per_node(),
+    );
+    println!(
+        "    Cortex-A55 (LITTLE) → fanout {:>3} (~{}B/node, {} cache lines)",
+        tree_a55.fanout(),
+        tree_a55.node_payload_bytes(),
+        tree_a55.lines_per_node(),
+    );
+    println!(
+        "    Cortex-A78 (big)    → fanout {:>3} (~{}B/node, {} cache lines)",
+        tree_a78.fanout(),
+        tree_a78.node_payload_bytes(),
+        tree_a78.lines_per_node(),
+    );
+    println!();
+
+    // Build a 100K-entry tree.
+    let n_btree: i64 = 100_000;
+    let mut tree = CacheBTree::new();
+    let build_start = std::time::Instant::now();
+    for i in 0..n_btree {
+        // Insert in pseudo-random order to exercise splits.
+        let k = (i.wrapping_mul(2654435761) & 0x7FFF_FFFF) % n_btree;
+        tree.insert(k, i as u64);
+    }
+    // Fill any gaps from collisions so the test data is dense.
+    for k in 0..n_btree {
+        tree.insert(k, k as u64);
+    }
+    let btree_build = build_start.elapsed();
+    println!(
+        "  Built B-Tree: {} entries in {:.1} ms ({} KB)",
+        tree.len(),
+        btree_build.as_secs_f64() * 1000.0,
+        tree.size_in_bytes() / 1024,
+    );
+
+    // Point lookup throughput.
+    bench("btree: point get (hit)", min_dur, || {
+        let mut acc = 0u64;
+        for i in (0..1000i64).map(|i| i * 97 % n_btree) {
+            acc = acc.wrapping_add(tree.get(i).unwrap_or(0));
+        }
+        acc
+    }).print();
+
+    bench("btree: point get (miss)", min_dur, || {
+        let mut acc = 0u64;
+        for i in 0..1000i64 {
+            if tree.get(n_btree + i).is_some() { acc += 1; }
+        }
+        acc
+    }).print();
+
+    bench("btree: range scan [25K, 75K]", min_dur, || {
+        tree.range(25_000, 75_000).len() as u64
+    }).print();
+
+    // Compare against std BTreeMap on the same workload.
+    use std::collections::BTreeMap;
+    let mut std_tree: BTreeMap<i64, u64> = BTreeMap::new();
+    for k in 0..n_btree {
+        std_tree.insert(k, k as u64);
+    }
+    let q_std = bench("btree: std::BTreeMap point get", min_dur, || {
+        let mut acc = 0u64;
+        for i in (0..1000i64).map(|i| i * 97 % n_btree) {
+            acc = acc.wrapping_add(*std_tree.get(&i).unwrap_or(&0));
+        }
+        acc
+    });
+    q_std.print();
+    println!();
+
+    // ================================================================
+    // 10. FM-INDEX (FULL-TEXT SEARCH OVER BWT)
+    // ================================================================
+    println!("━━━ FM-INDEX: full-text search (genomics / cybersecurity) ━━━");
+    println!();
+
+    // Build a synthetic DNA-ish corpus with planted patterns.
+    let alphabet = b"ACGT";
+    let mut corpus = Vec::with_capacity(64 * 1024);
+    let mut x: u64 = 0xBADC0FFEE0DDF00D;
+    while corpus.len() < 64 * 1024 {
+        x = x.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        corpus.push(alphabet[(x as usize) & 3]);
+    }
+    // Plant a needle so we can spot-check.
+    let needle = b"ACGTACGTAC";
+    for &offset in &[1234usize, 9876, 31415, 50000] {
+        if offset + needle.len() <= corpus.len() {
+            corpus[offset..offset + needle.len()].copy_from_slice(needle);
+        }
+    }
+
+    let fm_build_start = std::time::Instant::now();
+    let fm = FmIndex::build(&corpus);
+    let fm_build = fm_build_start.elapsed();
+    println!(
+        "  Built FM-Index: {} bytes of text → {} KB index in {:.1} ms",
+        corpus.len(),
+        fm.size_in_bytes() / 1024,
+        fm_build.as_secs_f64() * 1000.0,
+    );
+
+    let fm_count = fm.count(needle);
+    println!("  Pattern {:?} occurs {} times (planted ≥4)", std::str::from_utf8(needle).unwrap(), fm_count);
+
+    let q_fm_count = bench("fm-index: count (10-mer)", min_dur, || {
+        fm.count(needle)
+    });
+    q_fm_count.print();
+
+    bench("fm-index: count (5-mer ACGTA)", min_dur, || {
+        fm.count(b"ACGTA")
+    }).print();
+
+    bench("fm-index: locate (10-mer)", min_dur, || {
+        fm.locate(needle).len() as u64
+    }).print();
+
+    // Linear-scan baseline: how slow is naive substring search?
+    let q_naive_scan = bench("scan:     naive count (10-mer)", min_dur, || {
+        let pat = needle;
+        let mut count = 0u64;
+        if pat.len() <= corpus.len() {
+            for i in 0..=corpus.len() - pat.len() {
+                if &corpus[i..i + pat.len()] == pat {
+                    count += 1;
+                }
+            }
+        }
+        count
+    });
+    q_naive_scan.print();
+    println!(
+        "  → FM-Index is {:.1}x faster than naive scan",
+        q_naive_scan.mean_ns / q_fm_count.mean_ns,
+    );
+
+    // Correctness vs naive scan.
+    let mut naive_count = 0u64;
+    if needle.len() <= corpus.len() {
+        for i in 0..=corpus.len() - needle.len() {
+            if &corpus[i..i + needle.len()] == needle {
+                naive_count += 1;
+            }
+        }
+    }
+    assert_eq!(fm_count, naive_count, "FM-Index disagrees with naive scan");
+    println!("  ✓ FM-Index count matches naive scan ({})", fm_count);
 
     println!();
     println!("═══════════════════════════════════════════════════════════════");
