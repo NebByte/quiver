@@ -3,6 +3,7 @@ name = "quiver"
 version = "0.1.0"
 edition = "2021"
 description = "ARM-optimized memory-efficient data structure primitives — PoC"
+default-run = "quiver-bench"
 
 [lib]
 name = "quiver"
