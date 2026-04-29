@@ -1,0 +1,31 @@
+name: Demo ARM Benchmark
+
+on:
+  push:
+    paths:
+      - 'demo/test_db.csv'
+  workflow_dispatch:
+
+jobs:
+  run-demo:
+    name: Quiver CSV Demo on ARM
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run Demo Benchmark
+        run: cargo run --release --bin demo-bench demo/test_db.csv
+        env:
+          RUSTFLAGS: "-C target-cpu=native"
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-results
+          path: demo_results.json
+          retention-days: 7

@@ -22,6 +22,10 @@ path = "src/bin/benchmark_json.rs"
 name = "quiver-server"
 path = "src/bin/server.rs"
 
+[[bin]]
+name = "demo-bench"
+path = "src/bin/demo_bench.rs"
+
 [profile.release]
 opt-level = 3
 lto = true
