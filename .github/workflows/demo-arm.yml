@@ -1,31 +1,69 @@
-name: Demo ARM Benchmark
+name: Quiver Demo (User DB on ARM)
+
+run-name: "demo ${{ inputs.run_id }}"
 
 on:
-  push:
-    paths:
-      - 'demo/test_db.csv'
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag holding the uploaded user DB asset (asset name: input.db)'
+        required: true
+        type: string
+      run_id:
+        description: 'Demo run id (echoed back so the CLI can find this run)'
+        required: false
+        type: string
+        default: 'manual'
 
 jobs:
-  run-demo:
-    name: Quiver CSV Demo on ARM
+  demo-arm:
+    name: Run Quiver demo on real ARM (aarch64)
     runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Show ARM CPU info
+        run: |
+          echo "Architecture: $(uname -m)"
+          lscpu | head -20
+          echo ""
+          echo "=== CPU Features ==="
+          grep -m1 Features /proc/cpuinfo || true
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Run Demo Benchmark
-        run: cargo run --release --bin demo-bench demo/test_db.csv
+      - name: Build benchmark_db (release, native ARM)
+        run: cargo build --release --bin benchmark_db
         env:
           RUSTFLAGS: "-C target-cpu=native"
 
-      - name: Upload results
+      - name: Download user DB from release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p demo_input
+          gh release download "${{ inputs.release_tag }}" \
+            --pattern 'input.db' \
+            --dir demo_input \
+            --repo "$GITHUB_REPOSITORY"
+          ls -la demo_input
+          # Work on a copy so we never mutate the user's file (CREATE INDEX would).
+          cp demo_input/input.db working.db
+
+      - name: Run demo benchmark on user DB
+        run: |
+          ./target/release/benchmark_db --db working.db | tee demo_results.json
+        env:
+          RUSTFLAGS: "-C target-cpu=native"
+
+      - name: Upload results artifact
         uses: actions/upload-artifact@v4
         with:
           name: demo-results
           path: demo_results.json
-          retention-days: 7
+          retention-days: 30

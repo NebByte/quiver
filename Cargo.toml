@@ -23,8 +23,8 @@ name = "quiver-server"
 path = "src/bin/server.rs"
 
 [[bin]]
-name = "demo-bench"
-path = "src/bin/demo_bench.rs"
+name = "benchmark_db"
+path = "src/bin/benchmark_db.rs"
 
 [profile.release]
 opt-level = 3
