@@ -54,10 +54,23 @@ def need(cmd: str) -> None:
         sys.exit(f"error: '{cmd}' is required on PATH. Install it and retry.")
 
 
+QUOTE_PAIRS = [('"', '"'), ("'", "'"), ("“", "”"), ("‘", "’")]
+
+
 def clean_path_input(s: str) -> str:
     s = s.strip()
-    if (s.startswith('"') and s.endswith('"')) or (s.startswith("'") and s.endswith("'")):
-        s = s[1:-1]
+    # PowerShell drag-drop sometimes pastes "& 'C:\path\file'" (call-operator form).
+    if s.startswith("& "):
+        s = s[2:].strip()
+    # Strip matching quote pairs, including curly/smart quotes.
+    for left, right in QUOTE_PAIRS:
+        if s.startswith(left) and s.endswith(right) and len(s) >= 2:
+            s = s[1:-1]
+            break
+    # Expand ~ and %ENV% / $ENV.
+    s = os.path.expandvars(os.path.expanduser(s))
+    # PowerShell escapes spaces with backticks; remove the escape, keep the space.
+    s = s.replace("` ", " ")
     return s.strip()
 
 
@@ -67,12 +80,21 @@ def prompt_db_file() -> Path:
             raw = input("Drag and drop your .db file here, then press Enter:\n> ")
         except (EOFError, KeyboardInterrupt):
             sys.exit("\naborted.")
-        path = Path(clean_path_input(raw))
-        if not str(path):
+        if not raw.strip():
             print("  ! empty input\n")
             continue
+        cleaned = clean_path_input(raw)
+        path = Path(cleaned)
         if not path.exists():
-            print(f"  ! file not found: {path}\n")
+            print(f"  ! file not found")
+            print(f"      raw input  : {raw!r}")
+            print(f"      cleaned    : {cleaned!r}")
+            print(f"      resolved   : {path.resolve(strict=False)}")
+            print(
+                "    tip: in PowerShell, type the path inside single quotes, "
+                "or drag from File Explorer (not from inside a zip/OneDrive "
+                "placeholder).\n"
+            )
             continue
         if not path.is_file():
             print(f"  ! not a file: {path}\n")
@@ -81,7 +103,16 @@ def prompt_db_file() -> Path:
 
 
 def get_repo() -> str:
-    return must(["gh", "repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"])
+    cp = run(
+        ["gh", "repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"],
+        cwd=str(REPO_ROOT),
+    )
+    if cp.returncode != 0:
+        sys.exit(
+            "could not resolve GitHub repo from "
+            f"{REPO_ROOT} (gh said: {cp.stderr.strip()})"
+        )
+    return cp.stdout.strip()
 
 
 def create_release_with_db(repo: str, db_file: Path, tag: str) -> None:

@@ -1,0 +1,14 @@
+{
+  "db_file": "working.db",
+  "table": "users",
+  "col1": "age",
+  "col2": "dept",
+  "target1": 71,
+  "target2": 5,
+  "quiver_time_ns": 31951,
+  "sqlite_time_ns": 7277687,
+  "speedup_multiplier": 227.8,
+  "rows_processed": 500000,
+  "arch": "aarch64",
+  "timestamp": "1777482135"
+}

@@ -1,0 +1,1 @@
+{"db_file":"working.db","table":"payment","col1":"customer_id","col2":"staff_id","target1":296,"target2":1,"quiver_time_ns":248,"sqlite_time_ns":940375,"speedup_multiplier":3791.8,"rows_processed":16049,"arch":"aarch64","timestamp":"1777482908"}
